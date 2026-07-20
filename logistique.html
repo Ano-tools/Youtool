@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistique — Récap Livraisons</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --matrix-black:  #000000;
+            --matrix-card:   #060f06;
+            --matrix-border: #0d2b0d;
+            --matrix-green:  #00ff41;
+            --matrix-mid:    #00c030;
+            --matrix-dim:    #006618;
+            --matrix-dimmer: #003a0d;
+            --matrix-white:  #e8ffe8;
+            --font-mono:     'Share Tech Mono', monospace;
+            --font-ui:       'Rajdhani', sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--matrix-black);
+            color: var(--matrix-green);
+            font-family: var(--font-mono);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        #matrix-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; opacity: 0.18; pointer-events: none;
+        }
+
+        header, .container { position: relative; z-index: 1; }
+
+        header {
+            background: transparent;
+            border-bottom: 1px solid var(--matrix-dim);
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        header .eyebrow {
+            font-size: 0.7rem; letter-spacing: 0.3em;
+            color: var(--matrix-dim); text-transform: uppercase; margin-bottom: 0.4rem;
+        }
+
+        header h1 {
+            font-family: var(--font-ui); font-size: clamp(1.8rem, 5vw, 3rem);
+            font-weight: 700; letter-spacing: 0.15em; color: var(--matrix-green);
+            text-shadow: 0 0 20px var(--matrix-green), 0 0 40px var(--matrix-mid);
+            margin: 0; text-transform: uppercase;
+        }
+
+        header .subline {
+            font-size: 0.72rem; color: var(--matrix-dim);
+            letter-spacing: 0.2em; margin-top: 0.5rem;
+        }
+
+        .card {
+            background-color: var(--matrix-card) !important;
+            border: 1px solid var(--matrix-border) !important;
+            border-radius: 2px !important;
+            box-shadow: 0 0 30px rgba(0,255,65,0.06), inset 0 0 60px rgba(0,0,0,0.4) !important;
+        }
+
+        .card-body { padding: 2rem; }
+
+        .form-label {
+            font-size: 0.7rem; letter-spacing: 0.25em;
+            color: var(--matrix-dim); text-transform: uppercase; margin-bottom: 0.5rem;
+        }
+
+        textarea.form-control {
+            background-color: #020902 !important;
+            border: 1px solid var(--matrix-dimmer) !important;
+            border-radius: 2px !important;
+            color: var(--matrix-mid) !important;
+            font-family: var(--font-mono) !important;
+            font-size: 0.82rem; resize: vertical;
+            caret-color: var(--matrix-green);
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea.form-control::placeholder { color: var(--matrix-dimmer) !important; }
+
+        textarea.form-control:focus {
+            outline: none !important;
+            border-color: var(--matrix-dim) !important;
+            box-shadow: 0 0 0 2px rgba(0,255,65,0.08), 0 0 12px rgba(0,255,65,0.1) !important;
+            background-color: #030d03 !important;
+        }
+
+        .btn-matrix {
+            width: 100%; background: transparent;
+            border: 1px solid var(--matrix-green); color: var(--matrix-green);
+            font-family: var(--font-ui); font-size: 0.85rem; font-weight: 600;
+            letter-spacing: 0.3em; text-transform: uppercase;
+            padding: 0.75rem; border-radius: 2px; cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+        }
+
+        .btn-matrix:hover {
+            background: rgba(0,255,65,0.08);
+            box-shadow: 0 0 20px rgba(0,255,65,0.3);
+            color: var(--matrix-white);
+        }
+
+        .btn-matrix:active { background: rgba(0,255,65,0.18); }
+
+        hr { border-color: var(--matrix-border) !important; opacity: 1 !important; margin: 1.8rem 0; }
+
+        /* --- Table --- */
+        .matrix-table {
+            width: 100%; border-collapse: collapse;
+            font-family: var(--font-mono); font-size: 0.8rem;
+        }
+
+        .matrix-table thead tr { border-bottom: 1px solid var(--matrix-dim); }
+
+        .matrix-table thead th {
+            color: var(--matrix-dim); font-size: 0.62rem;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            padding: 0.6rem 0.7rem; font-weight: normal;
+        }
+
+        .matrix-table tbody tr {
+            border-bottom: 1px solid var(--matrix-border);
+            transition: background 0.15s;
+        }
+
+        .matrix-table tbody tr:hover { background: rgba(0,255,65,0.04); }
+
+        .matrix-table tbody td {
+            padding: 0.7rem 0.7rem;
+            color: var(--matrix-mid);
+            vertical-align: middle;
+        }
+
+        .td-name {
+            color: var(--matrix-white);
+            font-family: var(--font-ui);
+            font-weight: 600; font-size: 0.92rem;
+        }
+
+        .td-green {
+            color: var(--matrix-green);
+            text-shadow: 0 0 6px rgba(0,255,65,0.35);
+            text-align: right;
+        }
+
+        .td-center { text-align: center; }
+        .td-right  { text-align: right; }
+
+        /* Sous-ligne matières */
+        .mat-detail {
+            font-size: 0.68rem;
+            color: var(--matrix-dim);
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        /* Ligne totaux */
+        .matrix-table tfoot tr { border-top: 1px solid var(--matrix-mid); }
+
+        .matrix-table tfoot td {
+            padding: 0.75rem 0.7rem;
+            color: var(--matrix-green);
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .tfoot-amount {
+            text-align: right;
+            font-size: 0.95rem;
+            text-shadow: 0 0 10px rgba(0,255,65,0.5);
+        }
+
+        /* Séparateur section totaux globaux */
+        .global-totals {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .total-card {
+            border: 1px solid var(--matrix-border);
+            background: #020902;
+            border-radius: 2px;
+            padding: 1rem 1.2rem;
+            text-align: center;
+        }
+
+        .total-card .tc-label {
+            font-size: 0.6rem; letter-spacing: 0.25em;
+            color: var(--matrix-dim); text-transform: uppercase; margin-bottom: 0.3rem;
+        }
+
+        .total-card .tc-value {
+            font-family: var(--font-ui); font-size: 1.6rem; font-weight: 700;
+            color: var(--matrix-green);
+            text-shadow: 0 0 16px rgba(0,255,65,0.5);
+        }
+
+        .total-card .tc-value.small { font-size: 1.1rem; }
+
+        .matrix-error {
+            color: #ff4444; font-size: 0.8rem; letter-spacing: 0.1em;
+            text-align: center; padding: 1rem;
+            border: 1px solid #440000; background: #0d0000; border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<header>
+    <p class="eyebrow">// SYSTÈME DE GESTION //</p>
+    <h1>Logistique — Livraisons</h1>
+    <p class="subline">FOLLOW THE WHITE RABBIT &mdash; TRACE EVERY DELIVERY</p>
+</header>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-10 col-md-11">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="embedData" class="form-label">// Données des embeds</label>
+                        <textarea id="embedData" class="form-control" rows="12" placeholder="Collez les embeds YouTool ici..."></textarea>
+                    </div>
+                    <button type="button" class="btn-matrix" onclick="calculate()">
+                        &gt; Analyser les livraisons_
+                    </button>
+                    <hr>
+                    <div id="result" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    /* ---- Pluie Matrix ---- */
+    (function () {
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+        const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&';
+        let cols, drops;
+        const FS = 14;
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            cols = Math.floor(canvas.width / FS);
+            drops = Array(cols).fill(1);
+        }
+        function draw() {
+            ctx.fillStyle = 'rgba(0,0,0,0.045)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = FS + 'px Share Tech Mono, monospace';
+            drops.forEach((y, i) => {
+                const ch = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillStyle = Math.random() > 0.93 ? '#e8ffe8' : '#00c030';
+                ctx.fillText(ch, i * FS, y * FS);
+                if (y * FS > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            });
+        }
+        init();
+        setInterval(draw, 45);
+        window.addEventListener('resize', init);
+    })();
+
+    /* ---- Parser ---- */
+    function parseEmbeds(raw) {
+        // Découpe en blocs à chaque occurrence du header YouTool
+        const blocks = raw.split(/(?=YouTool Logistique)/);
+        const employees = {}; // clé = nom normalisé
+
+        blocks.forEach(block => {
+            if (!block.trim()) return;
+
+            // Nom de l'employé — on retire le char ID `char1:XXXX`
+            const nameMatch = block.match(/Employ[eé]\s*\n([^\n`]+)`?(?:char\d+:[a-f0-9]+)?`?/i);
+            if (!nameMatch) return;
+            const name = nameMatch[1].replace(/`.*$/,'').trim();
+            if (!name) return;
+
+            // Argent entreprise : ligne "+NNN$" après "Entreprise"
+            const societyMatch = block.match(/Entreprise[^\n]*\n\s*\+?([\d,\.]+)\$/i);
+            const societyAmt = societyMatch ? parseFloat(societyMatch[1].replace(',','.')) : 0;
+
+            // Prime employé
+            const primeMatch = block.match(/Prime employ[eé]\s*\n\s*\+?([\d,\.]+)\$/i);
+            const primeAmt = primeMatch ? parseFloat(primeMatch[1].replace(',','.')) : 0;
+
+            // Matières premières — "NNx nom" (peut y en avoir plusieurs)
+            const matsRaw = [];
+            const matBlock = block.match(/Mati[eè]res premi[eè]res\s*\n([\s\S]*?)(?:\n\d{2}\/\d{2}\/\d{4}|$)/i);
+            let totalMats = 0;
+            if (matBlock) {
+                const matLines = matBlock[1].split('\n');
+                matLines.forEach(ml => {
+                    const m = ml.trim().match(/^(\d+)x?\s+(.+)/i);
+                    if (m) {
+                        matsRaw.push({ qty: parseInt(m[1]), name: m[2].trim() });
+                        totalMats += parseInt(m[1]);
+                    }
+                });
+            }
+
+            // Date
+            const dateMatch = block.match(/(\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2})/);
+            const date = dateMatch ? dateMatch[1] : null;
+
+            const key = name.toLowerCase();
+            if (!employees[key]) {
+                employees[key] = {
+                    name,
+                    livraisons: 0,
+                    societyTotal: 0,
+                    primeTotal: 0,
+                    matsTotal: 0,
+                    matsDetail: {},
+                    firstDate: date,
+                    lastDate: date,
+                };
+            }
+            const emp = employees[key];
+            emp.livraisons++;
+            emp.societyTotal += societyAmt;
+            emp.primeTotal   += primeAmt;
+            emp.matsTotal    += totalMats;
+            matsRaw.forEach(({ qty, name: mn }) => {
+                emp.matsDetail[mn] = (emp.matsDetail[mn] || 0) + qty;
+            });
+            if (date) emp.lastDate = date;
+        });
+
+        return Object.values(employees).sort((a,b) => a.name.localeCompare(b.name));
+    }
+
+    /* ---- Affichage ---- */
+    function calculate() {
+        const raw = document.getElementById('embedData').value;
+        const resultDiv = document.getElementById('result');
+        const employees = parseEmbeds(raw);
+
+        if (!employees.length) {
+            resultDiv.innerHTML = '<div class="matrix-error">// ERREUR : aucune livraison détectée — vérifiez le format des embeds</div>';
+            return;
+        }
+
+        let totalSociety = 0, totalPrime = 0, totalMats = 0, totalLivraisons = 0;
+
+        let rows = '';
+        employees.forEach(emp => {
+            totalSociety    += emp.societyTotal;
+            totalPrime      += emp.primeTotal;
+            totalMats       += emp.matsTotal;
+            totalLivraisons += emp.livraisons;
+
+            const matsStr = Object.entries(emp.matsDetail)
+                .map(([n, q]) => `${q}x ${n}`)
+                .join(' / ') || '—';
+
+            const period = (!emp.firstDate || emp.firstDate === emp.lastDate)
+                ? (emp.firstDate || '—')
+                : `${emp.firstDate}<br><small style="color:var(--matrix-dimmer)">→</small><br>${emp.lastDate}`;
+
+            rows += `
+                <tr>
+                    <td class="td-name">${emp.name}</td>
+                    <td class="td-center">${emp.livraisons}</td>
+                    <td class="td-green">+$${emp.societyTotal.toFixed(2)}</td>
+                    <td class="td-green">+$${emp.primeTotal.toFixed(2)}</td>
+                    <td class="td-center">
+                        <span style="color:var(--matrix-white)">${emp.matsTotal}</span>
+                        <div class="mat-detail">${matsStr}</div>
+                    </td>
+                    <td class="td-center" style="font-size:0.68rem;color:var(--matrix-dim)">${period}</td>
+                </tr>`;
+        });
+
+        resultDiv.innerHTML = `
+            <table class="matrix-table">
+                <thead>
+                    <tr>
+                        <th>Employé</th>
+                        <th style="text-align:center">Livraisons</th>
+                        <th style="text-align:right">Société</th>
+                        <th style="text-align:right">Prime</th>
+                        <th style="text-align:center">Matériaux</th>
+                        <th style="text-align:center">Période</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+                <tfoot>
+                    <tr>
+                        <td>// Totaux</td>
+                        <td class="td-center tfoot-amount">${totalLivraisons}</td>
+                        <td class="tfoot-amount">+$${totalSociety.toFixed(2)}</td>
+                        <td class="tfoot-amount">+$${totalPrime.toFixed(2)}</td>
+                        <td class="td-center tfoot-amount">${totalMats}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <div class="global-totals">
+                <div class="total-card">
+                    <div class="tc-label">// Livraisons</div>
+                    <div class="tc-value">${totalLivraisons}</div>
+                </div>
+                <div class="total-card">
+                    <div class="tc-label">// Société</div>
+                    <div class="tc-value">+$${totalSociety.toFixed(2)}</div>
+                </div>
+                <div class="total-card">
+                    <div class="tc-label">// Primes</div>
+                    <div class="tc-value">+$${totalPrime.toFixed(2)}</div>
+                </div>
+                <div class="total-card">
+                    <div class="tc-label">// Matériaux</div>
+                    <div class="tc-value small">${totalMats} unités</div>
+                </div>
+            </div>`;
+    }
+</script>
+</body>
+</html>
